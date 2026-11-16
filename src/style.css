@@ -92,3 +92,44 @@ aside { background: var(--panel); border-radius: 10px; padding: 8px 12px; align-
   .card { width: calc(50% - 5px); } .card.small { width: calc(33% - 7px); min-width: 100px; }
   .unit { width: 96px; } .nodes { flex-wrap: wrap; }
 }
+
+/* ── v0.2: 전략 / 소환 / PvP / 계정 ── */
+.small { font-size: .75rem; }
+.loading { padding: 40px; text-align: center; color: var(--muted); }
+.acct { margin-left: 10px; font-size: .85rem; display: inline-flex; align-items: center; gap: 6px; }
+.acct img { width: 22px; height: 22px; border-radius: 50%; }
+button[disabled] { opacity: .45; cursor: default; }
+button.badge { position: relative; } button.badge::after { content: ''; position: absolute; top: 6px; right: 6px; width: 8px; height: 8px; border-radius: 50%; background: #ff4f81; }
+.doc { color: var(--doc); font-size: .7rem; }
+.grow { color: var(--good); }
+.triangle { margin: 14px auto; padding: 8px 14px; background: var(--panel); border-radius: 10px; display: inline-block; font-size: .9rem; }
+.starter-pick { display: flex; flex-direction: column; gap: 6px; align-items: center; max-width: 190px; }
+.doctrine { padding: 6px 8px; border-radius: 6px; margin: 4px 0; background: #1a1e29; opacity: .55; font-size: .85rem; border-left: 3px solid transparent; }
+.doctrine.on { opacity: 1; border-left-color: var(--doc); background: color-mix(in srgb, var(--doc) 14%, #1a1e29); }
+.doctrine .cnt { float: right; color: var(--muted); } .doctrine .run { color: var(--doc); }
+.scout { margin: 8px 0; padding: 8px 12px; border-radius: 10px; background: var(--panel); border-left: 4px solid var(--doc); }
+.scout .row { margin: 6px 0 0; } .scout .card.small { width: 104px; }
+.mu { padding: 1px 6px; border-radius: 4px; font-size: .78rem; font-weight: 700; }
+.mu.good { background: #1f4a30; color: #7ff0a8; } .mu.bad { background: #4a1f28; color: #ff9aa6; } .mu.even { background: #2e364b; color: var(--muted); }
+.round { text-align: center; color: var(--muted); font-weight: 700; margin-top: 8px; }
+.side-label { font-size: .8rem; color: var(--muted); }
+.battlelog .buff { color: #7ff0a8; }
+
+.tabs { display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; margin: 8px 0; }
+.banner { display: flex; gap: 16px; align-items: center; justify-content: center; text-align: left; padding: 14px 18px; border-radius: 14px; border: 2px solid var(--bc); background: linear-gradient(120deg, color-mix(in srgb, var(--bc) 22%, var(--panel)), var(--panel)); max-width: 640px; margin: 8px auto; }
+.banner h2 { margin: 0 0 4px; } .banner p { margin: 2px 0; }
+.gacha-result { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin: 14px auto; padding: 10px; border-radius: 14px; max-width: 760px; min-height: 20px; }
+.gacha-result.glow { box-shadow: 0 0 40px #ffb02e66; animation: glow 1.2s ease-in-out 2; }
+@keyframes glow { 50% { box-shadow: 0 0 70px #ff4f81aa; } }
+.flip { animation: flip .5s ease-out both; perspective: 600px; }
+@keyframes flip { from { transform: rotateY(90deg) scale(.7); opacity: 0; } to { transform: none; opacity: 1; } }
+.history { max-width: 520px; margin: 8px auto; text-align: left; background: var(--panel); border-radius: 10px; padding: 8px 12px; max-height: 260px; overflow-y: auto; font-size: .85rem; }
+
+.arena-top { display: flex; gap: 20px; align-items: center; background: var(--panel); border-radius: 12px; padding: 12px 16px; flex-wrap: wrap; }
+.rating { font-size: 2rem; font-weight: 900; }
+.mydeck { flex: 1; min-width: 260px; } .mydeck h3 { margin-top: 0; }
+.opponents { display: grid; gap: 10px; }
+.opp { background: var(--panel); border-radius: 12px; padding: 10px 14px; }
+.opp-head { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.opp .card.small, .mydeck .card.small { width: 104px; }
+.pvp-result { padding: 12px; border-radius: 12px; } .pvp-result.win { background: #1f3b2c; } .pvp-result.lose { background: #3b1f26; }
