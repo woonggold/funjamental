@@ -1,0 +1,31 @@
+rules_version = '2';
+
+// 카드 원정대 Firestore 보안 규칙
+// 배포: firebase deploy --only firestore:rules
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // 세이브 데이터: 본인만
+    match /users/{uid} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+    }
+
+    // PvP 방어덱: 로그인 유저는 누구나 읽기(상대 찾기), 쓰기는 본인 문서만
+    match /defenses/{uid} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null
+        && request.auth.uid == uid
+        && request.resource.data.ownerId == uid
+        && request.resource.data.cards.size() <= 6;
+    }
+
+    // 매치 기록: 공격자 본인만 생성, 당사자만 읽기, 수정/삭제 불가
+    // (방어자 레이팅 갱신·결과 검증은 Cloud Functions에서 seed로 재시뮬레이션해서 처리 예정)
+    match /matches/{id} {
+      allow create: if request.auth != null && request.resource.data.attackerId == request.auth.uid;
+      allow read: if request.auth != null
+        && (resource.data.attackerId == request.auth.uid || resource.data.defenderId == request.auth.uid);
+      allow update, delete: if false;
+    }
+  }
+}

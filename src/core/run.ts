@@ -2,12 +2,13 @@ import { AUGMENTS, AUGMENT_MAP } from '../data/augments';
 import { getDef, OBTAINABLE } from '../data/cards';
 import { RARITY } from '../data/elements';
 import { AUGMENT_STAGES, CHAPTER_1, shopOdds, type StageDef } from '../data/stages';
-import { addMods, type CardInstance, type Element, type Rarity } from '../data/types';
+import { DOCTRINE_IDS } from '../data/doctrines';
+import { addMods, type CardInstance, type Doctrine, type Rarity } from '../data/types';
 import { buildUnit, simulateBattle, type BattleResult } from './battle';
 import { rng, uid } from './rng';
 import type { SaveData } from './save';
 import { sellValue } from './stats';
-import { synergyMods } from './synergy';
+import { doctrineTier, synergyMods } from './synergy';
 
 // ─────────────────────────────────────────────
 // 한 번의 "원정" (로그라이크 런)
@@ -45,16 +46,19 @@ export class RunState {
   captured: string[] = [];
   cleared = false;
   log: string[] = [];
+  /** 정찰: 다음 스테이지 적 편성 (준비 화면에서 미리 볼 수 있다) */
+  enemyPreview: CardInstance[] = [];
+  enemyDoctrine: Doctrine = 'rush';
 
   constructor(private save: SaveData, starters: string[]) {
     for (const id of starters) this.team.push(this.makeCard(id));
     this.rollShop();
+    this.scout();
   }
 
   get stageDef(): StageDef { return CHAPTER_1[this.stage - 1]; }
   get maxTeamSize(): number { return Math.min(6, (this.stage >= 6 ? 5 : this.stage >= 3 ? 4 : 3) + this.bonusTeamSize); }
 
-  teamElements(): Element[] { return this.team.map((c) => getDef(c.defId).element); }
 
   /** 컬렉션에 있는 카드면 각성 레벨을 반영해서 생성 */
   makeCard(defId: string, star = 1): CardInstance {
@@ -167,18 +171,24 @@ export class RunState {
   }
 
   // ── 전투 ──────────────────────────
-  makeEnemies(): CardInstance[] {
+  /** 스테이지 진입 시 적 편성 확정. 계열(전략)은 스테이지 지정 또는 랜덤 */
+  scout() {
     const sd = this.stageDef;
+    const doctrine = sd.doctrine ?? rng.pick(DOCTRINE_IDS);
     const out: CardInstance[] = [];
     if (sd.boss) out.push({ uid: uid(), defId: sd.boss, star: 1, level: 1 });
     const odds = shopOdds(this.stage + (sd.type === 'elite' ? 2 : 0));
     while (out.length < sd.enemyCount) {
       const rarity = rng.weighted(odds) as Rarity;
-      const pool = OBTAINABLE.filter((c) => c.rarity === rarity);
-      out.push({ uid: uid(), defId: rng.pick(pool.length ? pool : OBTAINABLE).id, star: sd.star, level: 1 });
+      // 70%는 해당 계열 카드로 → 상성 플레이가 의미 있게
+      const inDoctrine = rng.next() < 0.7;
+      let pool = OBTAINABLE.filter((c) => c.rarity === rarity && (!inDoctrine || c.doctrine === doctrine));
+      if (!pool.length) pool = OBTAINABLE.filter((c) => c.doctrine === doctrine);
+      out.push({ uid: uid(), defId: rng.pick(pool).id, star: sd.star, level: 1 });
     }
-    // 보스는 후열에, 탱커형은 전열에
-    return out.sort((a, b) => getDef(b.defId).base.hp - getDef(a.defId).base.hp);
+    // 체력 높은 카드가 전열로
+    this.enemyPreview = out.sort((a, b) => getDef(b.defId).base.hp - getDef(a.defId).base.hp);
+    this.enemyDoctrine = doctrine;
   }
 
   allyMods() {
@@ -192,7 +202,7 @@ export class RunState {
 
   fight(): BattleResult | null {
     if (!this.team.length) return null;
-    const enemyCards = this.makeEnemies();
+    const enemyCards = this.enemyPreview;
     const allyMods = this.allyMods();
     const enemyMods = synergyMods(enemyCards);
     const power = this.stageDef.power;
@@ -209,6 +219,7 @@ export class RunState {
     const res = this.lastBattle!;
     if (res.win) {
       this.winStreak++;
+      this.applyGrowth();
       this.pendingRewards = this.makeRewards(res);
       this.phase = 'reward';
     } else {
@@ -218,8 +229,22 @@ export class RunState {
       if (this.life <= 0) { this.phase = 'over'; return; }
       this.income();
       this.rollShop();
+      this.scout();
       this.phase = 'prep';
     }
+  }
+
+  /** [성장] 출전한 성장 계열 카드는 승리할 때마다 영구(이번 런) 성장 */
+  applyGrowth() {
+    const tier = doctrineTier(this.team, 'growth');
+    const gain = tier >= 1 ? 2 : 1;
+    let n = 0;
+    for (const c of this.team) {
+      if (getDef(c.defId).doctrine !== 'growth') continue;
+      c.growth = Math.min(20, (c.growth ?? 0) + gain);
+      n++;
+    }
+    if (n) this.log.push(`🌱 성장 카드 ${n}장 성장 +${gain}`);
   }
 
   makeRewards(res: BattleResult): Reward[] {
@@ -279,13 +304,27 @@ export class RunState {
     this.stage++;
     this.income();
     this.rollShop();
+    this.scout();
     this.phase = 'prep';
   }
 
-  /** 증강체스식 수입: 기본 5 + 이자(10골드당 1) + 연승 보너스 */
+  /** 이자 한도 (요새 계열이면 증가 — 안전하게 모으는 운영) */
+  get effectiveInterestCap() {
+    const t = doctrineTier(this.team, 'fortress');
+    return this.interestCap + (t >= 1 ? 3 : t >= 0 ? 1 : 0);
+  }
+
+  /**
+   * 증강체스식 수입: 기본 5 + 이자(10골드당 1) + 연승 보너스
+   *  - 돌격: 연승 보너스 증가 (몰아치기)
+   *  - 요새: 이자 한도 증가 (버티며 모으기)
+   *  - 성장: 카드 자체가 성장 (applyGrowth)
+   */
   income() {
-    const interest = Math.min(this.interestCap, Math.floor(this.gold / 10));
-    const streak = this.winStreak >= 3 ? 2 : this.winStreak >= 2 ? 1 : 0;
+    const interest = Math.min(this.effectiveInterestCap, Math.floor(this.gold / 10));
+    let streak = this.winStreak >= 3 ? 2 : this.winStreak >= 2 ? 1 : 0;
+    const rushTier = doctrineTier(this.team, 'rush');
+    if (this.winStreak >= 1 && rushTier >= 0) streak += rushTier + 1;
     const total = 5 + interest + streak;
     this.gold += total;
     this.log.push(`💰 수입 +${total} (기본 5 · 이자 ${interest} · 연승 ${streak})`);

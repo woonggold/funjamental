@@ -1,4 +1,4 @@
-import type { Rarity } from './types';
+import type { Doctrine, Rarity } from './types';
 
 // 1장(챕터) = 10 스테이지. 새 챕터는 이 배열을 늘리면 된다.
 export interface StageDef {
@@ -11,6 +11,8 @@ export interface StageDef {
   /** 적 별 등급 */
   star: number;
   boss?: string;
+  /** 적 전략 계열 고정 (없으면 랜덤) */
+  doctrine?: Doctrine;
 }
 
 export const CHAPTER_1: StageDef[] = [
@@ -18,12 +20,12 @@ export const CHAPTER_1: StageDef[] = [
   { stage: 2,  name: '반딧불 숲',    type: 'battle', enemyCount: 3, power: 0.9, star: 1 },
   { stage: 3,  name: '이끼 동굴',    type: 'battle', enemyCount: 3, power: 1.0, star: 1 },
   { stage: 4,  name: '야수의 둥지',  type: 'elite',  enemyCount: 4, power: 1.1, star: 1 },
-  { stage: 5,  name: '고대 유적',    type: 'boss',   enemyCount: 2, power: 1.0, star: 1, boss: 'boss_golemking' },
+  { stage: 5,  name: '고대 유적',    type: 'boss',   enemyCount: 2, power: 1.0, star: 1, boss: 'boss_golemking', doctrine: 'fortress' },
   { stage: 6,  name: '번개 평원',    type: 'battle', enemyCount: 4, power: 1.1, star: 2 },
   { stage: 7,  name: '구름 다리',    type: 'battle', enemyCount: 4, power: 1.2, star: 2 },
   { stage: 8,  name: '폭풍의 눈',    type: 'elite',  enemyCount: 5, power: 1.2, star: 2 },
   { stage: 9,  name: '천공 신전',    type: 'battle', enemyCount: 5, power: 1.3, star: 2 },
-  { stage: 10, name: '폭풍 왕좌',    type: 'boss',   enemyCount: 3, power: 1.2, star: 2, boss: 'boss_stormdragon' },
+  { stage: 10, name: '폭풍 왕좌',    type: 'boss',   enemyCount: 3, power: 1.2, star: 2, boss: 'boss_stormdragon', doctrine: 'growth' },
 ];
 
 /** 이 스테이지를 클리어하면 증강체 선택 */
